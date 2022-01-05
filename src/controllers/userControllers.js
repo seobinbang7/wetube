@@ -170,27 +170,11 @@ export const getEdit = (req, res) => {
 export const postEdit = async (req, res) => {
     const {
         session :{
-            user: { _id, avatarUrl, email: sessionemail, username: sessionusername } 
+            user: { _id, avatarUrl} 
         },
         body: { name, email, username, location },
         file,
     } = req; // const id = req.session.user.id;
-    const searchPamers = []; // session id와 사용자 id가 다른 경우 에러 출력을 위한. // 해당 email과 username을 쓰고있는 회원이라면 중복되도 괜찮으나, 타 id 사용자는 중복되면 안되니까.
-    if (email !== sessionemail) {
-        searchParam.push( { email });
-    }
-    if (username !== sessionusername ) {
-        searchParam.push( { username })
-    }
-    if (searchPamers.length > 0) {
-        const foundUser = await User.findOne({ $or: searchParam });
-        if(foundUser && foundUser._id.toString() !== _id) {
-            return res.status(HTTP_BAD_REQUEST).render("edit-profile", {
-                pageTitle: "Edit profile",
-                errorMessage: "This username/email is already taken.",
-            });
-        }
-    }
     const updateUser = await User.findByIdAndUpdate(
         _id, 
     {
@@ -202,7 +186,7 @@ export const postEdit = async (req, res) => {
     }, { new:true }); // options으로 최근 데이터를 원한다는 뜻이다.
     req.session.user = updateUser;
     return res.redirect("/users/edit");
-}
+};
 
 export const getChangePassword = (req, res) => {
     // github 사용자일 경우 home으로 이동.
