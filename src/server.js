@@ -1,8 +1,12 @@
 import express from "express";
 import morgan from "morgan";
+import MongoStore from "connect-mongo";
+import session from "express-session";
 import videoRouter from './routers/videoRouter';
 import userRouter from './routers/userRouter';
-import globalRouter from './routers/globalRouter';
+import rootRouter from './routers/rootRouter';
+import { localsMiddleware } from './middlewares';
+import { connection } from 'mongoose';
 
 const app = express();
 const logger = morgan("dev");
@@ -10,8 +14,34 @@ const logger = morgan("dev");
 app.set("view engine", "pug");
 app.set("views", process.cwd() + "/src/views");
 app.use(logger);
-app.use(express.urlencoded({ extended:true }));
-app.use("/", globalRouter);
+app.use(express.urlencoded({ extended:true })); // req.body 객체 반환
+app.use(
+    session({
+    secret: process.env.COOKIE_SECRET,
+    resave: false, // request마다 기존에 있던 session에 아무런 변경사항이 없어도 session을 다시 저장한다.
+    saveUninitialized: false, // request가 들어오면 해당 request에서 새로 생성된 session에 아무런 작업이 이루어지지 않은 상황을 말한다.
+        // 클라이언트의 서버 방문 횟수에 따라 등급을 달리 하고 싶을 때 쓸 수 있다.
+    store: MongoStore.create({
+        mongoUrl: process.env.DB_URL,
+    })
+}));
+
+app.use((req, res, next) => {
+    req.sessionStore.all((error, sessions) => {
+        // console.log(sessions);
+        next();
+    });
+});
+
+app.get("/add-one", (req, res, next) => {
+    req.session.potato += 1; 
+    return res.send(`${req.session.id}\n${req.session.potato}`);
+})
+
+// 로그인이 되어있는지 확인한다.
+app.use(localsMiddleware);
+app.use("/uploads", express.static("uploads")) // express.static()에는 노출시키고 싶은 폴더이름을 적는다.
+app.use("/", rootRouter);
 app.use("/videos", videoRouter);
 app.use("/users", userRouter);
 

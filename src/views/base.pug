@@ -1,13 +1,33 @@
 doctype html 
 html(lang="ko")
-    head
-    link(rel="stylesheet" href="https://unpkg.com/mvp.css")
-    title  #{pageTitle} wetube   
-    body     
+    head 
+        title #{pageTitle} | wetube
+        link(rel="stylesheet", href="https://unpkg.com/mvp.css")
+    body 
         header 
             h1=pageTitle 
-        main
-            block content
+            nav
+                ul 
+                    li 
+                        a(href="/") Home
+                    if loggedIn 
+                        li 
+                            a(href="/videos/upload") Upload Video
+                        li 
+                            a(href=`/users/${loggedInUser._id}`) My Profile
+                        li 
+                            a(href="/users/edit") Edit Profile
+                        li 
+                            a(href="/users/logout") Log Out
+                        li 
+                            a(href="/my-profile") #{loggedInUser.name}의 Profile
+                    else        
+                        li 
+                            a(href="/search") Search
+                    li 
+                        a(href="/join") Join
+                    li 
+                        a(href="/login") Login
+    main
+        block content 
     include partials/footer.pug
-
-        
