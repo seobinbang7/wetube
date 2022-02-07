@@ -2,32 +2,11 @@ doctype html
 html(lang="ko")
     head 
         title #{pageTitle} | wetube
-        link(rel="stylesheet", href="https://unpkg.com/mvp.css")
+        link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css")
+        link(rel="stylesheet", href="/static/css/style.css")
     body 
-        header 
-            h1=pageTitle 
-            nav
-                ul 
-                    li 
-                        a(href="/") Home
-                    if loggedIn 
-                        li 
-                            a(href="/videos/upload") Upload Video
-                        li 
-                            a(href=`/users/${loggedInUser._id}`) My Profile
-                        li 
-                            a(href="/users/edit") Edit Profile
-                        li 
-                            a(href="/users/logout") Log Out
-                        li 
-                            a(href="/my-profile") #{loggedInUser.name}의 Profile
-                    else        
-                        li 
-                            a(href="/search") Search
-                    li 
-                        a(href="/join") Join
-                    li 
-                        a(href="/login") Login
-    main
-        block content 
-    include partials/footer.pug
+        include partials/header
+        main
+            block content 
+        include partials/footer.pug
+    script(src="/static/js/main.js")

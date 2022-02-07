@@ -1,4 +1,5 @@
 import User from "../models/User";
+import Video from "../models/Video";
 import fetch from "node-fetch";
 import bcrypt from "bcrypt";
 
@@ -96,13 +97,14 @@ export const finishGithubLogin = async (req, res) => {
     const params = new URLSearchParams(config).toString();
     const finalUrl = `${baseUrl}?${params}`;
     // finalUrl로 POST 요청을 한다. 
-    const tokenRequest = await (await fetch(finalUrl, {
-        method:"POST",
-        headers: {
-            Accept: "application/json",
-        },
+    const tokenRequest = await (
+        await fetch(finalUrl, {
+            method:"POST",
+            headers: {
+                Accept: "application/json",
+            },
     })).json(); //const json = await data.json();
-    console.log(tokenRequest);
+    console.log('token:' + tokenRequest);
     // url에 담긴 code를 github가 확인하고 access_token을 보낸다.
     // access_token이 있으면.
     if("access_token" in tokenRequest){
@@ -116,8 +118,7 @@ export const finishGithubLogin = async (req, res) => {
                     // Authorization은 권한 부여이다.
                     Authorization: `token ${access_token}`
             },
-        })
-    ).json();
+        })).json();
     // 가끔 user가 email을 안보내줄 때가 있다. 그래서 email API를 사용한다.
     // access_token 을 통해 email 가져온다.
     const emailData = await (
@@ -125,67 +126,92 @@ export const finishGithubLogin = async (req, res) => {
             headers: {
                 Authorization: `token ${access_token}`
         },
-    })
-    ).json();
+    })).json();
+    // console.log(emailData);
     // access_token을 주고 github가 확인해서 email array를 받는다.
     // email이(emaill array) primary인지 cerified인지 체크하고 해당되는 데이터만 찾는다.   
     const emailObj = emailData.find(
         (email) => email.primary === true && email.verified === true
     );
     if (!emailObj) {
+        req.flash("error", "cat'nt finish Github Lgoin.")
         return res.redirect("/login");
     }
     // emailObj의 email과 똑같은 email을 User database에서 찾는다.
     let user = await User.findOne({ email: emailObj.email });
-    // database에 해당 email이 없다면 github 전용 데이터를 생성한다.
+    // database에 해당 email이 없다면 github 전용 데이터를 생성한다. 
+    console.log(user);
     if (!user) {
         const user = await User.create({
             avatarUrl: userData.avatar_url,
-            name:userData.name ? userData.name : userData.login,  // userData.login은 github와 관련있다.
-            username:userData.login,
-            email:emailObj.email,
-            password:"",
+            name: userData.name ? userData.name : userData.login,  // userData.login은 github와 관련있다.
+            username: userData.login,
+            email: emailObj.email,
+            password: "",
             // socialOnly가 true이면 github의 계정이다.
             socialOnly: true,
-            location:userData.location,
-        })
+            location: userData.location,
+        });
     }
-            // 있다면 session에 저장한다. 쿠키 생성한다.
+             // 있다면 session에 저장한다. 쿠키 생성한다.
             req.session.loggedIn = true;
             req.session.user = user;
             return res.redirect("/");    
-    } else {
-        return res.redirect("/login")
     }
+        return res.redirect("/login")
 };
 
 export const logout = async (req, res) => {
     // session을 destory()한다.
-    await req.session.destroy();
-    return res.redirect("/");
+    try{
+        await req.session.destroy();
+        return res.redirect("/");
+    }catch(err){
+        console.log('logoutErr : ' + err);
+    }
 };
 export const getEdit = (req, res) => {
-    return res.render("edit-profile", {pageTitle: "Edit Profile", user: req.session.user });
+        return res.render("edit-profile", {pageTitle: "Edit Profile", user: req.session.user });
 }
 export const postEdit = async (req, res) => {
     const {
         session :{
-            user: { _id, avatarUrl} 
+            user: { _id, avatarUrl, email: sessionemail, username: sessionusername } 
         },
         body: { name, email, username, location },
         file,
-    } = req; // const id = req.session.user.id;
-    const updateUser = await User.findByIdAndUpdate(
-        _id, 
-    {
-        avatarUrl: file ? file.path : avatarUrl,  // file이 있다면 file.path 없으면 avatarurl
-        name,       // 기본적으로 findByIdAndUpdate 업뎃 전 리턴. new:true설정시 업뎃된 데이터 리턴.
-        email, 
-        username, 
-        location,
-    }, { new:true }); // options으로 최근 데이터를 원한다는 뜻이다.
-    req.session.user = updateUser;
-    return res.redirect("/users/edit");
+    } = req; 
+    // const id = req.session.user.id;
+    const searchPamers = []; // session id와 사용자 id가 다른 경우 에러 출력을 위한. // 해당 email과 username을 쓰고있는 회원이라면 중복되도 괜찮으나, 타 id 사용자는 중복되면 안되니까.
+    if (email !== sessionemail) {
+        searchParam.push( { email });
+    }
+    if (username !== sessionusername ) {
+        searchParam.push( { username })
+    }
+    if (searchPamers.length > 0) {
+        const foundUser = await User.findOne({ $or: searchParam });
+        if(foundUser && foundUser._id.toString() !== _id) {
+            return res.status(HTTP_BAD_REQUEST).render("edit-profile", {
+                pageTitle: "Edit profile",
+                errorMessage: "This username/email is already taken.",
+            });
+        }
+    }
+        const updateUser = await User.findByIdAndUpdate(
+            _id, 
+        {
+            avatarUrl: file ? file.path : avatarUrl,  
+            name,       
+            email, 
+            username, 
+            location,
+        }, { new : true }); 
+        req.session.user = updateUser;
+        return res.redirect("/users/edit");
+        // file이 있다면 file.path 없으면 avatarurl
+        // 기본적으로 findByIdAndUpdate 업뎃 전 리턴. new:true설정시 업뎃된 데이터 리턴.
+        // options으로 최근 데이터를 원한다는 뜻이다.
 };
 
 export const getChangePassword = (req, res) => {
@@ -229,7 +255,13 @@ export const postChangePassword = async (req, res) => {
 export const see = async (req, res) => {
     // 해당 페이지를 모두가 볼 수 있어야하니까 session id가 아닌 params id로 가져온다.
     const { id } = req.params;
-    const user = await User.findById(id);
+    const user = await User.findById(id).populate({
+        path: "videos",
+        populate: {
+            path:"owner",
+            model:"User",
+        },
+    });
     if (!user) {
         return res.status(404).render("404", { pageTitle: "User not found."});
     }
