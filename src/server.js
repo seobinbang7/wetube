@@ -5,6 +5,7 @@ import session from "express-session";
 import videoRouter from './routers/videoRouter';
 import userRouter from './routers/userRouter';
 import rootRouter from './routers/rootRouter';
+import apiRouter from'./routers/apiRouter';
 import { localsMiddleware } from './middlewares';
 
 const app = express();
@@ -28,22 +29,6 @@ app.use(
 // request가 들어오면 해당 request에서 새로 생성된 session에 아무런 작업이 이루어지지 않은 상황을 말한다.
         // 클라이언트의 서버 방문 횟수에 따라 등급을 달리 하고 싶을 때 쓸 수 있다.
 
-app.use((req, res, next) => {
-    req.sessionStore.all((error, sessions) => {
-        if(error){
-            return res.status(400).redirect("/");
-        } else {
-            // console.log(sessions);
-            next();
-        }
-    });
-});
-
-app.get("/add-one", (req, res, next) => {
-    req.session.potato += 1; 
-    return res.send(`${req.session.id}\n${req.session.potato}`);
-})
-
 // 로그인이 되어있는지 확인한다.
 app.use(localsMiddleware);
 app.use("/uploads", express.static("uploads")) // express.static()에는 노출시키고 싶은 폴더이름을 적는다.
@@ -51,5 +36,6 @@ app.use("/static", express.static("assets"));
 app.use("/", rootRouter);
 app.use("/videos", videoRouter);
 app.use("/users", userRouter);
+app.use("/api", apiRouter);
 
 export default app;

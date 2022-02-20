@@ -1,49 +1,24 @@
 import Video from "../models/Video";
 import User from "../models/User";
-
-const videos = [
-    {
-        title: "First Video",
-        rating:5,
-        comments:2,
-        createdAt: "2 minutes ago",
-        views:59,
-        id:1,
-    },
-    {
-        title: "Second Video",
-        rating:5,
-        comments:2,
-        createdAt: "2 minutes ago",
-        views:59,
-        id:2,
-    },
-    {
-        title: "Third Video",
-        rating:5,
-        comments:2,
-        createdAt: "2 minutes ago",
-        views:59,
-        id:3,
-    },
-];
-
 export const home = async (req, res) => {
     // 모든 controllers에는 id가 붙는다. video의 id도 가져온다.
     // sort는 정렬이다. sort를 사용해서 video를 순서대로 home에 보낸다. 그러면 video는 순서대로 노출된다.
-    const videos = await Video.find({}).sort({createdAt:"desc"})
+
+  const videos = await Video.find({})
+    .sort({ createdAt: "desc" })
     .populate("owner");
-    return res.render("home", { pageTitle: "Home", videos});
+  return res.render("home", { pageTitle: "Home", videos });
 };
+
 export const watch = async (req, res) => {
-    const { id } = req.params;
-    const video = await Video.findById(id).populate("owner");
-    console.log(video);
-    if(video === null){   
-        return res.render("404", {pageTitle: 'video not found.'});
-    }
-        return res.render("watch", video);
+  const { id } = req.params;
+  const video = await Video.findById(id).populate("owner");
+  if (!video) {
+    return res.render("404", { pageTitle: "Video not found." });
+  }
+  return res.render("watch", { pageTitle: video.title, video });
 };
+
 export const getEdit = async (req, res) => {
     const { id } = req.params;
     const { user: { _id }} = req.session;
@@ -143,3 +118,14 @@ export const search = async (req, res) => {
     }
     return res.render("search", { pageTitle: "Search", videos });
 }
+
+export const registerView = async  (req, res) => {
+    const { id } = req.params;
+    const video = await Video.findById(id);
+    if(!video){
+        return res.status(404);
+    }
+    video.meta.views = video.meta.views + 1;
+    await video.save();
+    return res.status(200);
+};
